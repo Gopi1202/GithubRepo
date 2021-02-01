@@ -6,6 +6,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
@@ -120,19 +121,23 @@ class DetailFragment : Fragment() {
             val comment = etEditComment.text.toString().trim()
             Log.v("tag", "comment: $comment")
 
-            commentList.add(comment)
-            commentAdapter.notifyDataSetChanged()
+            if(comment.isEmpty()){
+                Toast.makeText(context, "Please enter comments", Toast.LENGTH_SHORT).show()
+            } else {
+                commentList.add(comment)
+                commentAdapter.notifyDataSetChanged()
 
-            val editor = sharedPreferences.edit()
+                val editor = sharedPreferences.edit()
 
-            //Set the values
-            val set: MutableSet<String> = HashSet()
-            set.addAll(commentList)
-            editor.putStringSet(name, set)
-            editor.commit()
-            editor.apply()
+                //Set the values
+                val set: MutableSet<String> = HashSet()
+                set.addAll(commentList)
+                editor.putStringSet(name, set)
+                editor.commit()
+                editor.apply()
 
-            etEditComment.setText("")
+                etEditComment.setText("")
+            }
         }
     }
 }
