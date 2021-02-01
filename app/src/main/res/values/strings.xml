@@ -5,4 +5,6 @@
     <string name="more">More</string>
 
     <string name="no_data_found">No Data Found</string>
+    <string name="comments">Comments</string>
+    <string name="type_a_message">Type a message</string>
 </resources>

@@ -10,4 +10,5 @@
     <color name="white">#FFFFFFFF</color>
 
     <color name="grey">#BCBCBC</color>
+    <color name="greyLite">#ededed</color>
 </resources>

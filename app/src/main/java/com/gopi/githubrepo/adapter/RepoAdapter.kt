@@ -1,4 +1,4 @@
-package com.gopi.githubrepo
+package com.gopi.githubrepo.adapter
 
 import android.content.Context
 import android.view.LayoutInflater
@@ -9,10 +9,12 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.gopi.githubrepo.R
+import com.gopi.githubrepo.RepoClickListener
 import com.gopi.githubrepo.model.GithubModel
 import java.util.*
 
-class RepoAdapter(val context: Context, private val repoList: ArrayList<GithubModel>) :
+class RepoAdapter(val context: Context, private val repoList: ArrayList<GithubModel>, private var repoClickListener: RepoClickListener) :
     RecyclerView.Adapter<RepoAdapter.RepoViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RepoViewHolder {
@@ -47,14 +49,9 @@ class RepoAdapter(val context: Context, private val repoList: ArrayList<GithubMo
             .error(R.drawable.ic_movie_black_18dp)*/
             .into(holder.ivThumbnail)
 
-        /*
         holder.itemView.setOnClickListener {
-            val url = issuesList[position].url
-
-            val intent = Intent(context, WebViewActivity::class.java)
-            intent.putExtra("LINK", url)
-            context.startActivity(intent)
-        }*/
+            repoClickListener.repoClicked(holder.adapterPosition)
+        }
     }
 
     class RepoViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {

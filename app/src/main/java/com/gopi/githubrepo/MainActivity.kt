@@ -2,6 +2,7 @@ package com.gopi.githubrepo
 
 import android.os.Bundle
 import android.view.MenuItem
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
@@ -16,11 +17,6 @@ class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemS
 
     private var bottomNavigationView: BottomNavigationView? = null
     private var navHostFragment: NavHostFragment? = null
-    private val homeFragment: Fragment = HomeFragment()
-    private val detailFragment: Fragment = DetailFragment()
-    private val moreFragment: Fragment = MoreFragment()
-    private val fragmentManager: FragmentManager = supportFragmentManager
-    private var activeFragment: Fragment = homeFragment
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,10 +35,6 @@ class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemS
         if (bottomNavigationView != null) {
             bottomNavigationView!!.setOnNavigationItemSelectedListener(this)
         }
-
-        /*fragmentManager.beginTransaction().add(R.id.main_container, moreFragment, "3").hide(moreFragment).commit()
-        fragmentManager.beginTransaction().add(R.id.main_container, detailFragment, "2").hide(detailFragment).commit()
-        fragmentManager.beginTransaction().add(R.id.main_container, homeFragment, "1").commit()*/
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
@@ -50,22 +42,18 @@ class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemS
 
             R.id.homeMenu -> {
                 NavigationUI.onNavDestinationSelected(item, navHostFragment!!.navController)
-                /*fragmentManager.beginTransaction().hide(activeFragment).show(homeFragment).commit()
-                activeFragment = homeFragment*/
                 return true
             }
 
             R.id.detailMenu -> {
                 NavigationUI.onNavDestinationSelected(item, navHostFragment!!.navController)
-                /*fragmentManager.beginTransaction().hide(activeFragment).show(detailFragment).commit()
-                activeFragment = detailFragment*/
+                Toast.makeText(applicationContext, "Empty", Toast.LENGTH_SHORT).show()
                 return true
             }
 
             R.id.moreMenu -> {
                 NavigationUI.onNavDestinationSelected(item, navHostFragment!!.navController)
-                /*fragmentManager.beginTransaction().hide(activeFragment).show(moreFragment).commit()
-                activeFragment = moreFragment*/
+                Toast.makeText(applicationContext, "Empty", Toast.LENGTH_SHORT).show()
                 return true
             }
 

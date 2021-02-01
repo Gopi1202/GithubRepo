@@ -10,11 +10,17 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
+import androidx.navigation.Navigation.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.google.gson.reflect.TypeToken
 import com.gopi.githubrepo.R
-import com.gopi.githubrepo.RepoAdapter
+import com.gopi.githubrepo.adapter.RepoAdapter
+import com.gopi.githubrepo.RepoClickListener
 import com.gopi.githubrepo.RetrofitInterface
 import com.gopi.githubrepo.model.GithubModel
 import kotlinx.android.synthetic.main.fragment_home.*
@@ -26,13 +32,17 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
-class HomeFragment : Fragment() {
+class HomeFragment : Fragment(), RepoClickListener {
 
     private val tagName = HomeFragment::class.simpleName
     private val BASE_URL = "https://api.github.com/"
     private lateinit var linearLayoutManager: LinearLayoutManager
     private var repoList: ArrayList<GithubModel> = ArrayList()
     private lateinit var repoAdapter: RepoAdapter
+    private var loading: Boolean = false
+    private var lastItemId: Int = 0
+    private var repoListAsString: String = ""
+    private var position: Int = 0
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -55,22 +65,77 @@ class HomeFragment : Fragment() {
         linearLayoutManager = LinearLayoutManager(context)
         rvRepoList.layoutManager = linearLayoutManager
 
-        repoAdapter = RepoAdapter(context!!, repoList)
+        repoAdapter = RepoAdapter(context!!, repoList, this)
         rvRepoList.adapter = repoAdapter
 
-        getRepoList()
+        rvRepoList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                Log.v(tagName, "dx: $dx, dy: $dy")
+                if (dy > 0) {
+                    var lastCompletelyVisibleItemPosition = 0
+                    lastCompletelyVisibleItemPosition = (recyclerView.layoutManager as LinearLayoutManager?)!!.findLastVisibleItemPosition()
+
+                    if (!loading && lastCompletelyVisibleItemPosition == (repoList.size - 1)) {
+                        loading = true
+                        Log.v(tagName, "lastCompletelyVisibleItemPosition: $lastCompletelyVisibleItemPosition")
+                        lastItemId = repoList[lastCompletelyVisibleItemPosition].id
+                        loadMoreData(lastItemId)
+                    }
+                }
+            }
+        })
+
+        if (repoListAsString.isNotEmpty()) {
+            val gson = Gson()
+            val typeToken = object : TypeToken<ArrayList<GithubModel>>() {}.type
+            val list = gson.fromJson<ArrayList<GithubModel>>(
+                repoListAsString,
+                typeToken
+            )
+            if (list.isNotEmpty()) {
+                repoList.clear()
+                repoList.addAll(list)
+                repoAdapter.notifyDataSetChanged()
+                rvRepoList.scrollToPosition(position)
+            }
+        } else {
+            getRepoList()
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        if(arguments != null) {
+            repoListAsString = arguments!!.getString("REPO_LIST") ?: ""
+            position = arguments!!.getInt("POSITION")
+
+            Log.v(tagName, "repoListAsString: $repoListAsString")
+            Log.v(tagName, "position: $position")
+        }
+    }
+
+    private fun loadMoreData(lastItemId: Int) {
+        Log.v(tagName, "lastItemId: $lastItemId")
+        getRepoListAction(lastItemId)
     }
 
     private fun getRepoList() {
         if (isInternetAvailable(context!!)) {
-            getRepoListAction()
+            repoList.clear()
+            getRepoListAction(0)
         } else {
             Toast.makeText(context, "Check your internet connection", Toast.LENGTH_LONG).show()
         }
     }
 
-    private fun getRepoListAction() {
-        clProgress.visibility = View.VISIBLE
+    private fun getRepoListAction(page: Int) {
+        //show pagination progress based on API call
+        if (!loading) {
+            clProgress.visibility = View.VISIBLE
+        } else {
+            clProgressTwo.visibility = View.VISIBLE
+        }
 
         //The gson builder
         val gson = GsonBuilder()
@@ -95,7 +160,7 @@ class HomeFragment : Fragment() {
         val api: RetrofitInterface = retrofit.create(RetrofitInterface::class.java)
 
         //creating a api call to get audio list
-        val call: Call<List<GithubModel>?>? = api.getRepoList()
+        val call: Call<List<GithubModel>?>? = api.getRepoList(lastItemId)
 
         call?.enqueue(object : Callback<List<GithubModel>?> {
             override fun onResponse(
@@ -104,18 +169,31 @@ class HomeFragment : Fragment() {
             ) {
                 Log.v(tagName, "Response: " + response.body().toString())
                 clProgress.visibility = View.GONE
+                clProgressTwo.visibility = View.GONE
+                loading = false
 
-                repoList.clear()
-                repoList.addAll(response.body()!!)
+                if (response.body() != null) {
+                    try {
+                        if (response.body()!!.isEmpty()) {
+                            loading = true
+                        } else {
+                            repoList.addAll(response.body()!!)
 
-                Log.v(tagName, "repoList size: " + repoList.size)
-
-
+                            Log.v(tagName, "repoList size: " + repoList.size)
+                        }
+                    } catch (e: Exception) {
+                        Log.v(tagName, "Exception: " + e.localizedMessage)
+                    }
+                } else {
+                    Toast.makeText(context, response.message(), Toast.LENGTH_SHORT).show()
+                }
             }
 
             override fun onFailure(call: Call<List<GithubModel>?>, t: Throwable) {
                 Log.v(tagName, "onFailure: " + t.message)
                 clProgress.visibility = View.GONE
+                clProgressTwo.visibility = View.GONE
+
                 Toast.makeText(context, t.message, Toast.LENGTH_LONG).show()
             }
         })
@@ -150,5 +228,26 @@ class HomeFragment : Fragment() {
         }
 
         return result
+    }
+
+    override fun repoClicked(position: Int) {
+        Log.v(tagName, "clickedPos: $position")
+
+        val gson = Gson()
+
+        val bundle = bundleOf(
+            "POSITION" to position,
+            "NAME" to repoList[position].name,
+            "FULL_NAME" to repoList[position].fullName,
+            "LOGIN" to repoList[position].owner.login,
+            "AVATAR" to repoList[position].owner.avatarUrl,
+            "DESC" to repoList[position].description,
+            "REPO_LIST" to gson.toJson(repoList)
+        )
+
+        val navController = findNavController(activity!!, R.id.nav_host_fragment)
+        if (navController.currentDestination?.id == R.id.homeFragment) {
+            navController.navigate(R.id.detailFragment, bundle)
+        }
     }
 }
